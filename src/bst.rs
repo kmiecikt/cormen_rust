@@ -21,6 +21,24 @@ impl<T: Copy + PartialOrd> Tree<T> {
         Tree { root: None }
     }
     
+    pub fn contains(self: &Tree<T>, value: T) -> bool {
+        let mut current = &self.root;
+
+        while let Some(node) = current {
+            if value == node.value {
+                return true;
+            }
+            else if value < node.value {
+                current = &node.left;
+            }
+            else {
+                current = &node.right;
+            }
+        }
+        
+        false
+    }
+    
     pub fn insert(self: &mut Tree<T>, value: T) {
         let mut current = &mut self.root;
         
@@ -35,6 +53,10 @@ impl<T: Copy + PartialOrd> Tree<T> {
         
         let new_node = Box::new(Node::new(value));
         current.replace(new_node);
+    }
+    
+    pub fn delete(self: &mut Tree<T>, value: T) {
+
     }
     
     pub fn iter<'a>(self: &'a Tree<T>) -> TreeIntoIterator<'a, T> {
@@ -95,5 +117,20 @@ mod tests {
         
         let actual: Vec<i32> = tree.iter().collect();
         assert_eq!(expected, actual);
+    }
+    
+    #[test]
+    fn test_find() {
+        let mut tree = Tree::new();
+        
+        tree.insert(2);
+        tree.insert(1);
+        tree.insert(3);
+        
+        assert!(tree.contains(2));
+        assert!(tree.contains(1));
+        assert!(tree.contains(3));
+        assert!(!tree.contains(4));
+        assert!(!tree.contains(-1));
     }
 }
