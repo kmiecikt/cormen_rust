@@ -16,6 +16,41 @@ pub struct Tree<T: Copy + PartialOrd> {
     pub root: NodePointer<T>
 }
 
+fn max_node_mut<T: Copy + PartialOrd>(root: &mut NodePointer<T>) -> &mut NodePointer<T> {
+    let mut current = root;
+
+    while current.is_some() && current.as_ref().unwrap().right.is_some() {
+        let node = current.as_mut().unwrap();
+        current = &mut node.right;
+    }
+
+    current
+}
+
+fn delete_node<T: Copy + PartialOrd>(root: &mut NodePointer<T>) {
+    let mut this = root.take().unwrap();
+    let left = this.left.take();
+    let right = this.right.take();
+
+    if left.is_none() && right.is_none() {
+        return;
+    }
+    else if left.is_none() {
+        root.replace(right.unwrap());
+    }
+    else if right.is_none() {
+        root.replace(left.unwrap());
+    }
+    else {
+        this.left = left;
+        this.right = right;
+        let next = max_node_mut(&mut this.left);
+        this.value = next.as_ref().unwrap().value;
+        delete_node(next);
+        root.replace(this);
+    }
+}
+
 impl<T: Copy + PartialOrd> Tree<T> {
     pub fn new() -> Tree<T> {
         Tree { root: None }
@@ -35,6 +70,46 @@ impl<T: Copy + PartialOrd> Tree<T> {
         
         let new_node = Box::new(Node::new(value));
         current.replace(new_node);
+    }
+
+    pub fn find(self: &Tree<T>, value: T) -> bool {
+        let mut current = &self.root;
+
+        while let Some(node) = current {
+            if value == node.value {
+                return true;
+            }
+            else if value < node.value {
+                current = &node.left;
+            }
+            else {
+                current = &node.right;
+            }
+        }
+
+        false
+    }
+
+    pub fn remove(self: &mut Tree<T>, value: T) -> bool {
+        let mut current = &mut self.root;
+
+        while current.is_some() {
+            let current_value  = current.as_ref().unwrap().value;
+            if value == current_value {
+                delete_node(current);
+                return true;
+            }
+            else {
+                if value < current_value {
+                    current = &mut current.as_mut().unwrap().left;
+                }
+                else {
+                    current = &mut current.as_mut().unwrap().right;
+                }
+            }
+        }
+
+        false
     }
     
     pub fn iter<'a>(self: &'a Tree<T>) -> TreeIntoIterator<'a, T> {
@@ -95,5 +170,36 @@ mod tests {
         
         let actual: Vec<i32> = tree.iter().collect();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_find() {
+        let mut tree = Tree::new();
+        tree.insert(2);
+        tree.insert(0);
+        tree.insert(4);
+
+        assert!(tree.find(0));
+        assert!(tree.find(2));
+        assert!(tree.find(4));
+        assert!(!tree.find(-1));
+        assert!(!tree.find(1));
+        assert!(!tree.find(3));
+        assert!(!tree.find(5));
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut tree = Tree::new();
+        tree.insert(1);
+        tree.insert(0);
+        tree.insert(2);
+        tree.insert(3);
+
+        assert!(tree.remove(3));
+        assert!(!tree.find(3));
+
+        assert!(tree.remove(0));
+        assert!(!tree.find(0));
     }
 }
