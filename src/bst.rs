@@ -189,17 +189,66 @@ mod tests {
     }
 
     #[test]
-    fn test_remove() {
+    fn test_remove_leaf() {
         let mut tree = Tree::new();
         tree.insert(1);
         tree.insert(0);
-        tree.insert(2);
-        tree.insert(3);
-
-        assert!(tree.remove(3));
-        assert!(!tree.find(3));
 
         assert!(tree.remove(0));
         assert!(!tree.find(0));
+
+        assert!(!tree.remove(0));
+
+        assert!(tree.find(1));
+    }
+
+    #[test]
+    fn test_remove_parent_with_left_child() {
+        let mut tree = Tree::new();
+        tree.insert(2);
+        tree.insert(1);
+        tree.insert(0);
+
+        assert!(tree.remove(2));
+        assert!(!tree.find(2));
+        assert!(!tree.remove(2));
+
+        assert!(tree.find(0));
+        assert!(tree.find(1));
+    }
+
+    #[test]
+    fn test_remove_parent_with_right_child() {
+        let mut tree = Tree::new();
+        tree.insert(0);
+        tree.insert(1);
+        tree.insert(2);
+
+        assert!(tree.remove(0));
+        assert!(!tree.find(0));
+        assert!(!tree.remove(0));
+
+        assert!(tree.find(1));
+        assert!(tree.find(2));
+    }
+
+    #[test]
+    fn test_remove_root_with_two_children() {
+        let mut tree = Tree::new();
+        tree.insert(0);  // root
+        tree.insert(-2); // left branch
+        tree.insert(-1);
+        tree.insert(-3);
+        tree.insert(2);  // right branch
+        tree.insert(1);
+        tree.insert(3);
+
+        assert!(tree.remove(0));
+        assert!(!tree.find(0));
+        assert!(!tree.remove(0));
+
+        for i in vec![-3, -1, -2, 1, 2, 3] {
+            assert!(tree.find(i));
+        }
     }
 }
