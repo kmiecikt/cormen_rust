@@ -111,6 +111,64 @@ impl<T: Copy + PartialOrd> Tree<T> {
 
         false
     }
+
+    /// Finds the minimum value in the tree.
+    /// # Examples
+    /// ```
+    /// use cormen_rust::bst::Tree; 
+    /// let mut tree = Tree::new();
+    /// assert_eq!(None, tree.min());
+    /// 
+    /// tree.insert(1);
+    /// tree.insert(2);
+    /// tree.insert(0);
+    /// assert_eq!(Some(0), tree.min());
+    /// ```
+    pub fn min(self: &Tree<T>) -> Option<T> {
+        let mut current = &self.root;
+
+        while let Some(node) = current {
+            match &node.left {
+                Some(_) => {
+                    current = &node.left;
+                },
+                None => {
+                    return Some(node.value);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Finds the maximum value in the tree.
+    /// # Examples
+    /// ```
+    /// use cormen_rust::bst::Tree; 
+    /// let mut tree = Tree::new();
+    /// assert_eq!(None, tree.max());
+    /// 
+    /// tree.insert(1);
+    /// tree.insert(2);
+    /// tree.insert(0);
+    /// assert_eq!(Some(2), tree.max());
+    /// ```
+    pub fn max(self: &Tree<T>) -> Option<T> {
+        let mut current = &self.root;
+        
+        while let Some(node) = current {
+            match &node.right {
+                Some(_) => {
+                    current = &node.right;
+                },
+                None => {
+                    return Some(node.value);
+                }
+            }
+        }
+
+        None
+    }
     
     pub fn iter<'a>(self: &'a Tree<T>) -> TreeIntoIterator<'a, T> {
         let mut stack = Vec::new();
