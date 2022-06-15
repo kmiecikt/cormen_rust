@@ -27,6 +27,7 @@ fn max_node_mut<T: Copy + PartialOrd>(root: &mut NodePointer<T>) -> &mut NodePoi
     current
 }
 
+/// Deletes a given node. It must be a pointer to non-None node.
 fn delete_node<T: Copy + PartialOrd>(root: &mut NodePointer<T>) {
     let mut this = root.take().unwrap();
     let left = this.left.take();
@@ -51,6 +52,28 @@ fn delete_node<T: Copy + PartialOrd>(root: &mut NodePointer<T>) {
     }
 }
 
+/// The Drop trail for a tree. Because this data structure is recursive, the default, compiler-generated
+/// implementation may cause stack overflows. 
+/// This great link contains more details: https://rust-unofficial.github.io/too-many-lists/first-drop.html
+impl<T: Copy + PartialOrd> Drop for Tree<T> {
+    fn drop(&mut self) {
+        if let Some(root_node) = self.root.take() {
+            let mut stack = Vec::new();
+            stack.push(root_node);
+            
+            while let Some(mut current_node) = stack.pop() {
+                if let Some(left_node) = current_node.left.take() {
+                    stack.push(left_node);
+                }
+                if let Some(right_node) = current_node.right.take() {
+                    stack.push(right_node);
+                }
+            }
+        }
+    }
+}
+
+/// Implementation for the Binary Search Tree.
 impl<T: Copy + PartialOrd> Tree<T> {
     pub fn new() -> Tree<T> {
         Tree { root: None }
