@@ -16,6 +16,7 @@ pub struct Tree<T: Copy + PartialOrd> {
     pub root: NodePointer<T>
 }
 
+// Finds a node with maximum value in a tree with the given root.
 fn max_node_mut<T: Copy + PartialOrd>(root: &mut NodePointer<T>) -> &mut NodePointer<T> {
     let mut current = root;
 
@@ -108,7 +109,7 @@ impl<T: Copy + PartialOrd> Tree<T> {
                 current = &mut node.right;
             }
         }
-        
+
         let new_node = Box::new(Node::new(value));
         current.replace(new_node);
     }
