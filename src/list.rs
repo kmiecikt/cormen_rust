@@ -15,19 +15,23 @@ impl<T> List<T> {
     }
     
     pub fn push(&mut self, value: T) {
-        let new_node = Box::new(Node { value: value, next: self.head.take() });
+        let new_node = Box::new(Node { 
+            value: value, 
+            next: self.head.take() 
+        });
+
         self.head = Some(new_node);
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        self.head.take().map(|mut head_node| {
-            self.head = head_node.next.take();
-            head_node.value
+        self.head.take().map(|node| {
+            self.head = node.next;
+            node.value
         })
     }
     
     pub fn peek(&self) -> Option<&T> {
-        self.head.as_ref().map(|head_node| &head_node.value)
+        self.head.as_ref().map(|node| &node.value)
     }
     
     pub fn reverse(&mut self) {
@@ -45,6 +49,14 @@ impl<T> List<T> {
     
     pub fn iter<'a>(&'a self) -> ListIterator<'a, T> {
         ListIterator { current: &self.head }
+    }
+    
+    pub fn into_iter(self) -> ListIntoIterator<T> {
+        ListIntoIterator { list: self }
+    }
+    
+    pub fn iter_mut(&mut self) -> ListMutIterator<'_, T> {
+        ListMutIterator { current: self.head.as_deref_mut() }
     }
 }
 
@@ -70,12 +82,39 @@ impl<'a, T> Iterator for ListIterator<'a, T> {
     }
 }
 
+pub struct ListIntoIterator<T> {
+    list: List<T>
+}
+
+impl<T> Iterator for ListIntoIterator<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.list.pop()
+    }
+}
+
+pub struct ListMutIterator<'a, T> {
+    current: Option<&'a mut Node<T>>
+}
+
+impl<'a, T> Iterator for ListMutIterator<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current.take().map(|node| {
+            self.current = node.next.as_deref_mut();
+            &mut node.value
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     
     #[test]
-    fn test_push_peek() {
+    fn push_peek() {
         let mut list = List::new();
         assert_eq!(None, list.peek()); 
 
@@ -87,7 +126,7 @@ mod tests {
     }
     
     #[test]
-    fn test_push_pop() {
+    fn push_pop() {
         let mut list = List::new();
         assert_eq!(None, list.pop());
         
@@ -102,7 +141,7 @@ mod tests {
     }
     
     #[test]
-    fn test_reverse() {
+    fn reverse() {
         let mut list = List::new();
 
         list.push(1);
@@ -117,7 +156,7 @@ mod tests {
     }
    
     #[test]
-    fn iter_tests() {
+    fn iter() {
         let mut list = List::new();
 
         list.push(1);
@@ -125,9 +164,41 @@ mod tests {
         list.push(3);
         
         let mut iterator = list.iter();
-        assert_eq!(3, *iterator.next().unwrap());
-        assert_eq!(2, *iterator.next().unwrap());
-        assert_eq!(1, *iterator.next().unwrap());
+        assert_eq!(Some(&3), iterator.next());
+        assert_eq!(Some(&2), iterator.next());
+        assert_eq!(Some(&1), iterator.next());
+        assert_eq!(None, iterator.next());
+    }
+    
+    #[test]
+    fn into_iter() {
+        let mut list = List::new();
+        
+        list.push(1);
+        list.push(2);
+        list.push(3);
+
+        let mut iterator = list.into_iter();
+        assert_eq!(Some(3), iterator.next());
+        assert_eq!(Some(2), iterator.next());
+        assert_eq!(Some(1), iterator.next());
+        assert_eq!(None, iterator.next());
+        assert_eq!(None, iterator.next());
+    }
+    
+    #[test]
+    fn iter_mut() {
+        let mut list = List::new();
+
+        list.push(1);
+        list.push(2);
+        list.push(3);
+
+        let mut iterator = list.iter_mut();
+
+        assert_eq!(Some(&mut 3), iterator.next());
+        assert_eq!(Some(&mut 2), iterator.next());
+        assert_eq!(Some(&mut 1), iterator.next());
         assert_eq!(None, iterator.next());
     }
 }
