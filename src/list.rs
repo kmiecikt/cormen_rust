@@ -1,5 +1,8 @@
+use std::ptr;
+
 pub struct List<T> {
-    head: Link<T>
+    head: Link<T>,
+    tail: *mut Node<T>
 }
 
 struct Node<T> {
@@ -11,23 +14,53 @@ type Link<T> = Option<Box<Node<T>>>;
 
 impl<T> List<T> {
     pub fn new() -> List<T> {
-        List { head: None }
+        List { head: None, tail: ptr::null_mut() }
+    }
+
+    pub fn push_back(&mut self, value: T) {
+        unsafe {
+            let mut new_node = Box::new(Node {
+                value: value,
+                next: None
+            });
+
+            let raw_tail: *mut _ = &mut *new_node;
+
+            if self.tail.is_null() {
+                self.head = Some(new_node);
+            }
+            else {
+                (*self.tail).next = Some(new_node);
+            }
+
+            self.tail = raw_tail;
+        }
     }
     
-    pub fn push(&mut self, value: T) {
-        let new_node = Box::new(Node { 
+    pub fn push_front(&mut self, value: T) {
+        let mut new_node = Box::new(Node { 
             value: value, 
             next: self.head.take() 
         });
+
+        if self.tail.is_null() {
+            self.tail = &mut *new_node;
+        }
 
         self.head = Some(new_node);
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        self.head.take().map(|node| {
-            self.head = node.next;
-            node.value
-        })
+        self.head.take().map_or_else(
+            || {
+                self.tail = ptr::null_mut();
+                None
+            }, 
+            |node| {
+                self.head = node.next;
+                Some(node.value)
+            }
+        )
     }
     
     pub fn peek(&self) -> Option<&T> {
@@ -114,29 +147,43 @@ mod tests {
     use super::*;
     
     #[test]
-    fn push_peek() {
+    fn push_front_peek() {
         let mut list = List::new();
         assert_eq!(None, list.peek()); 
 
-        list.push(1);
+        list.push_front(1);
         assert_eq!(1, *list.peek().unwrap());
 
-        list.push(2);
+        list.push_front(2);
         assert_eq!(2, *list.peek().unwrap());
     }
     
     #[test]
-    fn push_pop() {
+    fn push_front_pop() {
         let mut list = List::new();
         assert_eq!(None, list.pop());
         
-        list.push(1);
-        list.push(2);
-        list.push(3);
+        list.push_front(1);
+        list.push_front(2);
+        list.push_front(3);
         
         assert_eq!(Some(3), list.pop());
         assert_eq!(Some(2), list.pop());
         assert_eq!(Some(1), list.pop());
+        assert_eq!(None, list.pop());
+    }
+
+    #[test]
+    fn push_back_pop() {
+        let mut list = List::new();
+
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+
+        assert_eq!(Some(1), list.pop());
+        assert_eq!(Some(2), list.pop());
+        assert_eq!(Some(3), list.pop());
         assert_eq!(None, list.pop());
     }
     
@@ -144,9 +191,9 @@ mod tests {
     fn reverse() {
         let mut list = List::new();
 
-        list.push(1);
-        list.push(2);
-        list.push(3);
+        list.push_front(1);
+        list.push_front(2);
+        list.push_front(3);
         list.reverse();
         
         assert_eq!(Some(1), list.pop());
@@ -159,9 +206,9 @@ mod tests {
     fn iter() {
         let mut list = List::new();
 
-        list.push(1);
-        list.push(2);
-        list.push(3);
+        list.push_front(1);
+        list.push_front(2);
+        list.push_front(3);
         
         let mut iterator = list.iter();
         assert_eq!(Some(&3), iterator.next());
@@ -174,9 +221,9 @@ mod tests {
     fn into_iter() {
         let mut list = List::new();
         
-        list.push(1);
-        list.push(2);
-        list.push(3);
+        list.push_front(1);
+        list.push_front(2);
+        list.push_front(3);
 
         let mut iterator = list.into_iter();
         assert_eq!(Some(3), iterator.next());
@@ -190,9 +237,9 @@ mod tests {
     fn iter_mut() {
         let mut list = List::new();
 
-        list.push(1);
-        list.push(2);
-        list.push(3);
+        list.push_front(1);
+        list.push_front(2);
+        list.push_front(3);
 
         let mut iterator = list.iter_mut();
 
