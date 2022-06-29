@@ -2,7 +2,7 @@ use std::ptr;
 
 pub struct List<T> {
     head: Link<T>,
-    tail: *mut Node<T>
+    tail: Link<T>
 }
 
 struct Node<T> {
@@ -10,71 +10,85 @@ struct Node<T> {
     pub next: Link<T>
 }
 
-type Link<T> = Option<Box<Node<T>>>;
+// type Link<T> = Option<Box<Node<T>>>;
+type Link<T> = *mut Node<T>;
 
 impl<T> List<T> {
     pub fn new() -> List<T> {
-        List { head: None, tail: ptr::null_mut() }
+        List { head: ptr::null_mut(), tail: ptr::null_mut() }
     }
 
     pub fn push_back(&mut self, value: T) {
         unsafe {
-            let mut new_node = Box::new(Node {
+            let new_node = Box::into_raw(Box::new(Node {
                 value: value,
-                next: None
-            });
-
-            let raw_tail: *mut _ = &mut *new_node;
+                next: ptr::null_mut()
+            }));
 
             if self.tail.is_null() {
-                self.head = Some(new_node);
+                self.head = new_node;
             }
             else {
-                (*self.tail).next = Some(new_node);
+                (*self.tail).next = new_node;
             }
 
-            self.tail = raw_tail;
+            self.tail = new_node;
         }
     }
     
     pub fn push_front(&mut self, value: T) {
-        let mut new_node = Box::new(Node { 
+        let new_node = Box::into_raw(Box::new(Node { 
             value: value, 
-            next: self.head.take() 
-        });
+            next: self.head 
+        }));
 
         if self.tail.is_null() {
-            self.tail = &mut *new_node;
+            self.tail = new_node;
         }
 
-        self.head = Some(new_node);
+        self.head = new_node;
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        self.head.take().map_or_else(
-            || {
-                self.tail = ptr::null_mut();
-                None
-            }, 
-            |node| {
-                self.head = node.next;
-                Some(node.value)
+        unsafe {
+            if !self.head.is_null() {
+                let head = Box::from_raw(self.head);
+                self.head =  head.next;
+                if self.head.is_null() {
+                    self.tail = ptr::null_mut();
+                }
+
+                Some(head.value)
             }
-        )
+            else {
+                None
+            }
+        }
     }
     
     pub fn peek(&self) -> Option<&T> {
-        self.head.as_ref().map(|node| &node.value)
+        if !self.head.is_null() {
+            unsafe { 
+               Some(&(*self.head).value)
+            }
+        }
+        else {
+            None
+        }
     }
     
     pub fn reverse(&mut self) {
-        let mut current = self.head.take();
-        let mut previous = None;
+        let mut current = self.head;
+        let mut previous = ptr::null_mut();
+        self.tail = self.head;
         
-        while let Some(mut current_node) = current {
-            current = current_node.next.take();
-            current_node.next = previous;
-            previous = Some(current_node);
+        while !current.is_null() {
+            unsafe {
+                let next = (*current).next;
+                (*current).next = previous;
+                previous = current;
+                current = next;
+            }
         }
         
         self.head = previous;
@@ -89,7 +103,7 @@ impl<T> List<T> {
     }
     
     pub fn iter_mut(&mut self) -> ListMutIterator<'_, T> {
-        ListMutIterator { current: self.head.as_deref_mut() }
+        ListMutIterator { current: &self.head }
     }
 }
 
@@ -108,10 +122,16 @@ impl<'a, T> Iterator for ListIterator<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.current.as_ref().map(|current_node| {
-            self.current = &current_node.next;
-            &current_node.as_ref().value
-        })
+        if !self.current.is_null() {
+            unsafe {
+                let result = &(**self.current).value;
+                self.current = &(**self.current).next;
+                Some(result)
+            }
+        }
+        else {
+            None
+        }
     }
 }
 
@@ -128,17 +148,23 @@ impl<T> Iterator for ListIntoIterator<T> {
 }
 
 pub struct ListMutIterator<'a, T> {
-    current: Option<&'a mut Node<T>>
+    current: &'a Link<T>
 }
 
 impl<'a, T> Iterator for ListMutIterator<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.current.take().map(|node| {
-            self.current = node.next.as_deref_mut();
-            &mut node.value
-        })
+        if !self.current.is_null() {
+            unsafe {
+                let result = &mut (**self.current).value;
+                self.current = &(**self.current).next;
+                Some(result)
+            }
+        }
+        else {
+            None
+        }
     }
 }
 
