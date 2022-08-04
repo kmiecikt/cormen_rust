@@ -1,3 +1,36 @@
+/// Finds first occurrence of a pattern in a text using naive algorithm.
+/// # Examples:
+/// ```
+/// use cormen_rust::patterns::naive_find;
+///
+/// assert_eq!(naive_find(&String::from("abc"), &String::from("abbabcdef")), vec![3]);
+/// assert_eq!(naive_find(&String::from("abaab"), &String::from("abbabcabaabcd")), vec![6]);
+/// assert_eq!(naive_find(&String::from("bab"), &String::from("aababab")), vec![2, 4]);
+/// assert_eq!(naive_find(&String::from("abc"), &String::from("bdbdbdabd")), Vec::new());
+/// ```
+pub fn naive_find(pattern: &String, text: &String) -> Vec<usize> {
+    let mut result = Vec::new();
+    let pattern_vec: Vec<char> = pattern.chars().collect();
+    if pattern_vec.len() == 0 {
+        return result
+    }
+
+    let text_vec: Vec<char> = text.chars().collect();
+    
+    for i in 0..text_vec.len() - pattern_vec.len() + 1 {
+        for j in 0..pattern_vec.len() {
+            if pattern_vec[j] != text_vec[i + j] {
+                break;
+            }
+            else if j == pattern_vec.len() - 1 {
+                result.push(i);
+            }
+        }
+    }
+    
+    result
+}
+
 /// Finds first occurrence of a pattern in a text using Knuth-Morris-Pratt algorithm.
 /// # Examples:
 /// ```
