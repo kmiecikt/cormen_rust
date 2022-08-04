@@ -1,24 +1,27 @@
-/// Finds first occurrence of a pattern in a text using Knuth-Morris-Prath algorithm.
+/// Finds first occurrence of a pattern in a text using Knuth-Morris-Pratt algorithm.
 /// # Examples:
 /// ```
 /// use cormen_rust::patterns::kmp_find;
 ///
-/// assert_eq!(kmp_find(&String::from("abc"), &String::from("abbabcdef")), Some(3));
-/// assert_eq!(kmp_find(&String::from("abaab"), &String::from("abbabcabaabcd")), Some(6));
-/// assert_eq!(kmp_find(&String::from("abc"), &String::from("bdbdbdabd")), None);
+/// assert_eq!(kmp_find(&String::from("abc"), &String::from("abbabcdef")), vec![3]);
+/// assert_eq!(kmp_find(&String::from("abaab"), &String::from("abbabcabaabcd")), vec![6]);
+/// assert_eq!(kmp_find(&String::from("bab"), &String::from("aababab")), vec![2, 4]);
+/// assert_eq!(kmp_find(&String::from("abc"), &String::from("bdbdbdabd")), Vec::new());
 /// ```
-pub fn kmp_find(pattern: &String, text: &String) -> Option<usize> {
+pub fn kmp_find(pattern: &String, text: &String) -> Vec<usize> {
     let pattern_vec: Vec<char> = pattern.chars().collect();
+    let mut result = Vec::new();
+
     if pattern_vec.len() == 0 {
-        return Some(0);
+        return result;
     }
 
-    let mut longest_prefix = 0;
-    let mut result = 0;
     let prefix_table  = create_kmp_prefix_table(&pattern_vec);
+    let mut longest_prefix = 0;
+    let mut i = 0;
     
     for text_char in text.chars() {
-        result += 1;
+        i += 1;
 
         while longest_prefix > 0 && text_char != pattern_vec[longest_prefix] {
             longest_prefix = prefix_table[longest_prefix];
@@ -29,11 +32,12 @@ pub fn kmp_find(pattern: &String, text: &String) -> Option<usize> {
         }
         
         if longest_prefix == pattern_vec.len() {
-            return Some(result - pattern_vec.len()); 
+            result.push(i - pattern_vec.len());
+            longest_prefix = prefix_table[longest_prefix - 1];
         }
     }
     
-    None
+    result
 }
 
 // Prefix table: a mapping of a longest suffix of a sub-string 
