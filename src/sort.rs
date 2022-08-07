@@ -24,6 +24,54 @@ pub fn insert_sort<T: PartialOrd + Copy>(list: &mut Vec<T>) {
     }
 }
 
+pub fn quick_sort<T: PartialOrd + Copy>(list: &mut Vec<T>) {
+    if list.len() == 0 {
+        return
+    }
+
+    let mut stack = Vec::new();
+    stack.push((0, list.len() - 1));
+
+    while let Some((left, right)) = stack.pop() {
+        if left < right {
+            let middle = quick_sort_partition(list, left, right);
+            if middle > left + 1 {
+                stack.push((left, middle - 1));
+            }
+            if middle + 1 < right {
+                stack.push((middle + 1, right));
+            }
+        }
+    }
+}
+
+fn quick_sort_partition<T: PartialOrd + Copy>(list: &mut Vec<T>, left: usize, right: usize) -> usize {
+    let middle_index = (left + right + 1) / 2;
+    let middle = list[middle_index];
+    list.swap(left, middle_index);
+
+    let mut i = left + 1;
+    let mut j = right;
+
+    while i <= j {
+        while i < j && list[i] <= middle {
+            i += 1;
+        }
+
+        while list[j] > middle {
+            j -= 1;
+        }
+
+        if i < j {
+            list.swap(i, j);
+        }
+        i += 1;
+    }
+
+    list.swap(j, left);
+    j
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -59,6 +107,21 @@ mod tests {
     #[test]
     fn insert_sort_randomized() {
         run_randomized_test(insert_sort);
+    }
+
+    #[test]
+    fn quick_sort_simple() {
+        run_simple_test(quick_sort);
+    }
+
+    #[test]
+    fn quick_sort_reversed() {
+        run_reversed_test(quick_sort);
+    }
+
+    #[test]
+    fn quick_sort_randomized() {
+        run_randomized_test(quick_sort);
     }
 
     fn run_simple_test(tested_function: fn(&mut Vec<i32>) -> ()) {
