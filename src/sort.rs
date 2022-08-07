@@ -8,6 +8,22 @@ pub fn bubble_sort<T: PartialOrd + Copy>(list: &mut Vec<T>) {
     }
 }
 
+pub fn insert_sort<T: PartialOrd + Copy>(list: &mut Vec<T>) {
+    for i in 1..list.len() {
+        for j in 0..i {
+            if list[i] < list[j] {
+                let temp = list[i];
+                for k in (j..i).rev() {
+                    list[k + 1] = list[k];
+                }
+                list[j] = temp;
+
+                break;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -20,6 +36,16 @@ mod tests {
     #[test]
     fn bubble_sort_reversed() {
         run_reversed_test(bubble_sort);
+    }
+
+    #[test]
+    fn insert_sort_simple() {
+        run_simple_test(insert_sort);
+    }
+
+    #[test]
+    fn insert_sort_reversed() {
+        run_reversed_test(insert_sort);
     }
 
     fn run_simple_test(tested_function: fn(&mut Vec<i32>) -> ()) {
