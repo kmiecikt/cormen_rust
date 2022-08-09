@@ -130,10 +130,10 @@ fn partition<T: Copy + PartialOrd>(values: &mut Vec<T>, left: usize, right: usiz
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use rand::seq::SliceRandom;
-    use super::*;
     
     #[test]
     fn min_for_not_empty() {

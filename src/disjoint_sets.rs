@@ -1,75 +1,99 @@
-use std::ptr;
+use std::cell::Cell;
 
-pub struct DisjointSet<T> {
-    sets: Vec<Box<Set<T>>>
+pub struct DisjointSets<T> {
+    values: Vec<T>,
+    parents: Vec<Cell<Option<usize>>>
 }
 
-pub struct Set<T> {
-    pub value: T,
-    parent: *mut Set<T>
+#[derive(Clone, Copy, Debug)]
+pub struct Set {
+    index: usize
 }
 
-impl<T> DisjointSet<T> {
-    pub fn new() -> DisjointSet<T> {
-        DisjointSet { sets: Vec::new() }
-    }   
-    
-    pub fn create_set(&mut self, value: T) -> &mut Set<T> {
-       let set = Box::new(Set {
-            value: value,
-            parent: ptr::null_mut()
-       });
-
-       self.sets.push(set);
-       let index = self.sets.len() - 1;
-       
-       &mut (*self.sets[index])
-    }
-    
-}
-
-impl<T> Set<T> {
-    pub fn find_root(&mut self) -> &Set<T> {
-        unsafe {
-            &(*self.find_compress_parent())
-        }
-    }
-    
-    pub fn union<'a>(first: &'a mut Set<T>, second: &mut Set<T>) -> &'a Set<T> {
-        unsafe {
-            let first_root = Set::find_compress_parent(first);
-            let mut second_root = Set::find_compress_parent(second);
-            
-            if first_root != second_root {
-                (*second_root).parent = first_root;
-            }
-
-            &(*first_root)
-        }
-    }
-    
-    unsafe fn find_compress_parent(&mut self) -> *mut Set<T> {
-        let mut self_ptr: *mut Set<T> = self;
-        let mut root = self_ptr;
-        while !(*root).parent.is_null() {
-            root = (*root).parent;
-        }
-        
-        if self_ptr != root {
-            (*self_ptr).parent = root;
-        }
-        
-        root
+impl PartialEq for Set {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
     }
 }
 
-#[cfg(test)]
+impl<T> DisjointSets<T> {
+    pub fn new() -> Self {
+        DisjointSets {
+            values: Vec::new(),
+            parents: Vec::new()
+        }
+    }
+
+    pub fn create_set(&mut self, value: T) -> Set {
+        let index = self.values.len();
+        let set = Set {
+            index: index
+        };
+
+        self.values.push(value);
+        self.parents.push(Cell::new(None));
+
+        set
+    }
+
+    pub fn find_root(&self, set: &Set) -> Set {
+        match self.parents[set.index].get() {
+            Some(parent) => Set { index: parent },
+            None => *set
+        }
+    }
+
+    pub fn get_value(&self, set: &Set) -> &T {
+        &self.values[set.index]
+    }
+
+    pub fn union(&mut self, first: &Set, second: &Set) -> Set {
+        let first_parent = self.find_compress_parent_index(first.index);
+        let second_parent = self.find_compress_parent_index(second.index);
+
+        if first_parent != second_parent {
+            self.parents[second_parent].set(Some(first_parent))
+        }
+
+        Set { index: first_parent }
+    }
+
+    fn find_compress_parent_index(&mut self, set_index: usize) -> usize {
+        let mut result = set_index;
+        while let Some(parent) = self.parents[result].get() {
+            result = parent
+        }
+
+        if result != set_index {
+            self.parents[set_index].set(Some(result))
+        }
+
+        result
+    }
+}
+
+#[cfg(test)] 
 mod tests {
     use super::*;
 
     #[test]
-    fn find_root_for_new_set_returns_self() {
-        let mut sets = DisjointSet::new();
-        let mut a = sets.create_set("a");
+    fn singleton_is_its_root() {
+        let mut sets = DisjointSets::new();
+        let a = sets.create_set("a");
+        let b = sets.create_set("b");
+
+        assert_eq!("a", *sets.get_value(&sets.find_root(&a)));
+        assert_eq!("b", *sets.get_value(&sets.find_root(&b)));
+    }
+
+    #[test]
+    fn union_finds_the_same_parent() {
+        let mut sets = DisjointSets::new();
+        let a = sets.create_set("a");
+        let b = sets.create_set("b");
+        let c = sets.union(&a, &b);
+
+        assert_eq!(c, sets.find_root(&a));
+        assert_eq!(c, sets.find_root(&b));
     }
 }
