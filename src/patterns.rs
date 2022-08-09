@@ -1,18 +1,9 @@
 /// Finds first occurrence of a pattern in a text using naive algorithm.
-/// # Examples:
-/// ```
-/// use cormen_rust::patterns::naive_find;
-///
-/// assert_eq!(naive_find(&String::from("abc"), &String::from("abbabcdef")), vec![3]);
-/// assert_eq!(naive_find(&String::from("abaab"), &String::from("abbabcabaabcd")), vec![6]);
-/// assert_eq!(naive_find(&String::from("bab"), &String::from("aababab")), vec![2, 4]);
-/// assert_eq!(naive_find(&String::from("abc"), &String::from("bdbdbdabd")), Vec::new());
-/// ```
 pub fn naive_find(pattern: &String, text: &String) -> Vec<usize> {
     let mut result = Vec::new();
     let pattern_vec: Vec<char> = pattern.chars().collect();
     if pattern_vec.len() == 0 {
-        return result
+        return result;
     }
 
     let text_vec: Vec<char> = text.chars().collect();
@@ -32,15 +23,6 @@ pub fn naive_find(pattern: &String, text: &String) -> Vec<usize> {
 }
 
 /// Finds first occurrence of a pattern in a text using Knuth-Morris-Pratt algorithm.
-/// # Examples:
-/// ```
-/// use cormen_rust::patterns::kmp_find;
-///
-/// assert_eq!(kmp_find(&String::from("abc"), &String::from("abbabcdef")), vec![3]);
-/// assert_eq!(kmp_find(&String::from("abaab"), &String::from("abbabcabaabcd")), vec![6]);
-/// assert_eq!(kmp_find(&String::from("bab"), &String::from("aababab")), vec![2, 4]);
-/// assert_eq!(kmp_find(&String::from("abc"), &String::from("bdbdbdabd")), Vec::new());
-/// ```
 pub fn kmp_find(pattern: &String, text: &String) -> Vec<usize> {
     let pattern_vec: Vec<char> = pattern.chars().collect();
     let mut result = Vec::new();
@@ -113,5 +95,22 @@ mod tests {
         let prefix_table = create_kmp_prefix_table(&pattern);
 
         assert_eq!(vec![0, 1, 2, 3, 4], prefix_table);
+    }
+    
+    #[test]
+    fn naive_find_test() {
+        run_find_tests(naive_find);
+    }
+    
+    #[test]
+    fn kmp_find_test() {
+        run_find_tests(kmp_find);
+    }
+    
+    fn run_find_tests(finder: fn (&String, &String) -> Vec<usize>) {
+        assert_eq!(finder(&String::from("abc"), &String::from("abbabcdef")), vec![3]);
+        assert_eq!(finder(&String::from("abaab"), &String::from("abbabcabaabcd")), vec![6]);
+        assert_eq!(finder(&String::from("bab"), &String::from("aababab")), vec![2, 4]);
+        assert_eq!(finder(&String::from("abc"), &String::from("bdbdbdabd")), Vec::new());
     }
 }
