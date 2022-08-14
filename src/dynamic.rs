@@ -1,4 +1,4 @@
-use std::{fmt::Write, cmp::Ordering};
+use std::{fmt::Write, cmp::Ordering, mem::swap};
 
 pub fn cut_rod(prices: &Vec<f64>) -> (f64, Vec<usize>) {
     let mut profit = vec![0.0; prices.len() + 1];
@@ -106,48 +106,35 @@ pub fn matrix_mul(matrices: &Vec<MatrixSize>) -> MultiplicationOrder {
 }
 
 pub fn knapsack<'a>(items: &'a Vec<KnapsackItem>, capacity: usize) -> OptimalKnapsack<'a> {
-    let mut best_values = vec![0.0; items.len() * capacity];
+    let mut best_previous_values = vec![0.0; capacity + 1];
+    let mut best_current_values = vec![0.0; capacity + 1];
     let mut chosen_items = vec![false; items.len() * capacity];
 
-    if items[0].weight <= capacity {
-        let index = idx(items[0].weight - 1, 0, capacity);
-        best_values[index] = items[0].value;
-        chosen_items[index] = true;
-    }
+    for i in 0..items.len() {
+        for j in 1..=capacity {
+            best_current_values[j] = best_previous_values[j];
 
-    for i in 1..items.len() {
-        for j in 0..capacity {
-            let value ;
-            let without_item = best_values[idx(j, i - 1, capacity)];
+            if items[i].weight <= j {
+                let with_item = best_previous_values[j - items[i].weight] + items[i].value;
 
-            if items[i].weight <= j + 1 {
-                let previous = if items[i].weight <= j { best_values[(idx(j - items[i].weight, i - 1, capacity))] } else { 0.0 };
-                let with_item = previous + items[i].value;
-
-                if with_item > without_item {
-                    value = with_item;
-                    chosen_items[idx(j, i, capacity)] = true;
-                }
-                else {
-                    value = without_item;
+                if with_item > best_current_values[j] {
+                    best_current_values[j] = with_item;
+                    chosen_items[idx(j - 1, i, capacity)] = true;
                 }
             }
-            else {
-                value = without_item;
-            }
-            
-            best_values[idx(j, i, capacity)] = value;
         }
+        
+        swap(&mut best_current_values, &mut best_previous_values);
     }    
     
     // Finding best value in the last row
-    let (total_weight, best_value) = knapsack_find_best_value(&best_values[best_values.len() - capacity..best_values.len()]);
+    let (total_weight, best_value) = knapsack_find_best_value(&best_previous_values);
     let items = knapsack_find_items(items, &chosen_items, capacity, total_weight);
         
-    OptimalKnapsack { total_weight: total_weight + 1, total_value: best_value, items: items }
+    OptimalKnapsack { total_weight: total_weight, total_value: best_value, items: items }
 }
 
-fn knapsack_find_best_value(values: &[f64]) -> (usize, f64) {
+fn knapsack_find_best_value(values: &Vec<f64>) -> (usize, f64) {
     let (index, best_value) = values.iter().enumerate()
         .max_by(|(_, x), (_, y)| x.partial_cmp(y).unwrap_or(Ordering::Equal))
         .unwrap();
@@ -156,7 +143,7 @@ fn knapsack_find_best_value(values: &[f64]) -> (usize, f64) {
 }
 
 fn knapsack_find_items<'a>(items: &'a Vec<KnapsackItem>, chosen_items: &Vec<bool>, capacity: usize, total_weight: usize) -> Vec<&'a KnapsackItem> {
-    let mut current_weight = total_weight + 1;
+    let mut current_weight = total_weight;
     let mut result = Vec::new();
 
     for i in (0..items.len()).rev() {
