@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::{fmt::Write, cmp::Ordering};
 
 pub fn cut_rod(prices: &Vec<f64>) -> (f64, Vec<usize>) {
     let mut profit = vec![0.0; prices.len() + 1];
@@ -105,6 +105,87 @@ pub fn matrix_mul(matrices: &Vec<MatrixSize>) -> MultiplicationOrder {
     }
 }
 
+pub fn knapsack<'a>(items: &'a Vec<KnapsackItem>, capacity: usize) -> OptimalKnapsack<'a> {
+    let mut best_values = vec![0.0; items.len() * capacity];
+    let mut chosen_items = vec![false; items.len() * capacity];
+
+    if items[0].weight <= capacity {
+        let index = idx(items[0].weight - 1, 0, capacity);
+        best_values[index] = items[0].value;
+        chosen_items[index] = true;
+    }
+
+    for i in 1..items.len() {
+        for j in 0..capacity {
+            let value ;
+            let without_item = best_values[idx(j, i - 1, capacity)];
+
+            if items[i].weight <= j + 1 {
+                let previous = if items[i].weight <= j { best_values[(idx(j - items[i].weight, i - 1, capacity))] } else { 0.0 };
+                let with_item = previous + items[i].value;
+
+                if with_item > without_item {
+                    value = with_item;
+                    chosen_items[idx(j, i, capacity)] = true;
+                }
+                else {
+                    value = without_item;
+                }
+            }
+            else {
+                value = without_item;
+            }
+            
+            best_values[idx(j, i, capacity)] = value;
+        }
+    }    
+    
+    // Finding best value in the last row
+    let (total_weight, best_value) = knapsack_find_best_value(&best_values[best_values.len() - capacity..best_values.len()]);
+    let items = knapsack_find_items(items, &chosen_items, capacity, total_weight);
+        
+    OptimalKnapsack { total_weight: total_weight + 1, total_value: best_value, items: items }
+}
+
+fn knapsack_find_best_value(values: &[f64]) -> (usize, f64) {
+    let (index, best_value) = values.iter().enumerate()
+        .max_by(|(_, x), (_, y)| x.partial_cmp(y).unwrap_or(Ordering::Equal))
+        .unwrap();
+    
+    (index, *best_value)
+}
+
+fn knapsack_find_items<'a>(items: &'a Vec<KnapsackItem>, chosen_items: &Vec<bool>, capacity: usize, total_weight: usize) -> Vec<&'a KnapsackItem> {
+    let mut current_weight = total_weight + 1;
+    let mut result = Vec::new();
+
+    for i in (0..items.len()).rev() {
+        if chosen_items[(idx(current_weight - 1, i, capacity))] {
+            result.push(&items[i]);
+            current_weight -= items[i].weight;
+            
+            if current_weight == 0 {
+                break;
+            }
+        }
+    }
+
+    result.reverse();
+    result
+}
+
+#[derive(Debug, PartialEq)]
+pub struct KnapsackItem {
+    pub value: f64,
+    pub weight: usize
+}
+
+pub struct OptimalKnapsack<'a> {
+    pub total_weight: usize,
+    pub total_value: f64,
+    pub items: Vec<&'a KnapsackItem>
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,5 +223,44 @@ mod tests {
         
         assert_eq!(15125, result.multiplications);
         assert_eq!("((A0*(A1*A2))*((A3*A4)*A5))", result.to_string())
+    }
+    
+    #[test]
+    fn knapsack_1_test() {
+        let items = vec![
+            KnapsackItem { value: 1.0, weight: 2 },
+            KnapsackItem { value: 4.0, weight: 3 },
+            KnapsackItem { value: 5.0, weight: 6 },
+            KnapsackItem { value: 6.0, weight: 7 }
+        ];
+        
+        let expected_items = vec![
+            &KnapsackItem { value: 4.0, weight: 3 },
+            &KnapsackItem { value: 6.0, weight: 7 }
+        ];
+
+        let result = knapsack(&items, 10);
+        assert_eq!(&expected_items, &result.items);
+        assert_eq!(10.0, result.total_value);
+        assert_eq!(10, result.total_weight);
+    }
+    
+    #[test]
+    fn knapsack_2_test() {
+        let items = vec![
+            KnapsackItem { value: 60.0, weight: 10 },
+            KnapsackItem { value: 100.0, weight: 20 },
+            KnapsackItem { value: 120.0, weight: 30 }
+        ];
+
+        let expected_items = vec![
+            &KnapsackItem { value: 100.0, weight: 20 },
+            &KnapsackItem { value: 120.0, weight: 30 }
+        ];
+        
+        let result = knapsack(&items, 50);
+        assert_eq!(&expected_items, &result.items);
+        assert_eq!(220.0, result.total_value);
+        assert_eq!(50, result.total_weight);
     }
 }
