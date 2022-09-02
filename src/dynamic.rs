@@ -127,7 +127,6 @@ pub fn knapsack<'a>(items: &'a Vec<KnapsackItem>, capacity: usize) -> OptimalKna
         swap(&mut best_current_values, &mut best_previous_values);
     }    
     
-    // Finding best value in the last row
     let (total_weight, best_value) = knapsack_find_best_value(&best_previous_values);
     let items = knapsack_find_items(items, &chosen_items, capacity, total_weight);
         
@@ -171,6 +170,86 @@ pub struct OptimalKnapsack<'a> {
     pub total_weight: usize,
     pub total_value: f64,
     pub items: Vec<&'a KnapsackItem>
+}
+
+pub fn longest_common_substring(x: &String, y: &String) -> String {
+    let x_chars: Vec<char> = x.chars().collect();
+    let y_chars: Vec<char> = y.chars().collect();
+    
+    let mut lcs_table = vec![LcsData { length: 0, longest_substring: LcsBestSubstring::Both }; x_chars.len() * y_chars.len()];
+
+    fn get_lc_lengths(data: &Vec<LcsData>, i: usize, j: usize, n: usize) -> usize {
+        if i == 0 || j == 0 {
+            0
+        }
+        else {
+            data[idx(i - 1, j - 1, n)].length
+        }
+    }
+
+    for i in 1..=x_chars.len() {
+        for j in 1..=y_chars.len() {
+            let mut best = LcsData { length: 0, longest_substring: LcsBestSubstring::Both };
+            if x_chars[i - 1] == y_chars[j - 1] {
+                best.length = get_lc_lengths(&lcs_table, i - 1, j - 1, x_chars.len()) + 1;
+                best.longest_substring = LcsBestSubstring::Both;
+            }
+            else {
+                let best_i = get_lc_lengths(&lcs_table, i - 1, j, x_chars.len());
+                let best_j = get_lc_lengths(&lcs_table, i, j - 1, x_chars.len());
+
+                if best_i > best_j {
+                    best.length = best_i;
+                    best.longest_substring = LcsBestSubstring::X;
+                }
+                else {
+                    best.length = best_j;
+                    best.longest_substring = LcsBestSubstring::Y;
+                }
+            }
+
+            lcs_table[idx(i - 1, j - 1, x_chars.len())] = best;
+        }
+    }
+
+    // Walking back
+    let mut result = Vec::new();
+    let mut i = x.len();
+    let mut j = y.len();
+
+    while i > 0 && j > 0 {
+        let current = &lcs_table[idx(i - 1, j - 1, x_chars.len())];
+        match current.longest_substring {
+            LcsBestSubstring::Both => {
+                result.push(x_chars[i - 1]);
+                i -= 1;
+                j -= 1;
+            },
+            LcsBestSubstring::X => {
+                i -= 1;
+            },
+            LcsBestSubstring::Y => {
+                j -= 1;
+            }
+        }
+    }
+
+    result.reverse();
+
+    result.into_iter().collect()
+}
+
+#[derive(Copy, Clone)]
+enum LcsBestSubstring {
+    Both,
+    X,
+    Y
+}
+
+#[derive(Copy, Clone)]
+struct LcsData {
+    length: usize,
+    longest_substring: LcsBestSubstring
 }
 
 #[cfg(test)]
@@ -249,5 +328,14 @@ mod tests {
         assert_eq!(&expected_items, &result.items);
         assert_eq!(220.0, result.total_value);
         assert_eq!(50, result.total_weight);
+    }
+
+    #[test]
+    fn longest_common_substring_1_test() {
+        let x = String::from("abcbdab");
+        let y = String::from("bdcaba");
+
+        let result = longest_common_substring(&x, &y);
+        assert_eq!(String::from("bdab"), result);
     }
 }
